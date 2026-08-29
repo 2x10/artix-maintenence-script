@@ -1,13 +1,16 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 # =============================================
-#  Artix Linux Maintenance Script (with logging)
+#  Artix Linux Maintenance Script
 # =============================================
 
-#set -e
+#set -euo pipefail
 export LC_ALL=C
 
-DATE=$(date "+%d.%m.%Y_%H-%M") 
+DATE=$(date "+%d.%m.%Y_%H-%M")
+TIME=$(date "+%H:%M")
 LOGFILE="$HOME/.logs/system_maintenance_${DATE}.log"
+
+notify-send -n ~/.icons/Artix_logo.svg.png -a "artix-system-maintenance.sh" "Artix Linux" "Starting maintenance schedule. . . Time: ${TIME}" 
 
 mkdir -p "$(dirname "$LOGFILE")"
 
@@ -20,13 +23,35 @@ YELLOW="\e[33m"
 BLUE="\e[34m"
 RESET="\e[0m"
 
-echo -e "${BLUE}=== Artix System Maintenance Started ===${RESET}"
+echo -e "${BLUE}=== Artix System Maintenance Started ===${RESET}\n"
+fastfetch
+echo -e "\n"
 echo "Log file: $LOGFILE"
 
-# ----- update system -----
+# ----- fix mirrors -----
+reflector | sudo tee /etc/pacman.d/mirrorlist
+
+# ----- fix keys -----
+#pacman-key --refresh-keys
+sudo pacman-key --populate artix archlinux
+
+# ----- update from main repos -----
 echo -e "\n${YELLOW}Updating system packages (pacman)...${RESET}"
 sudo pacman -Syu --noconfirm
 
+# ----- node maintenance -----
+echo -e "\n${YELLOW}Updating node to LTS (nvm)...${RESET}"
+source /usr/share/nvm/init-nvm.sh
+
+nvm install --lts --reinstall-packages-from=current
+nvm use --lts
+
+current=$(nvm version)
+
+nvm alias default ${current}
+nvm alias system ${current}
+
+# ----- AUR package update -----
 echo -e "\n${YELLOW}Updating AUR packages (paru)...${RESET}"
 paru -Syu --noconfirm
 
@@ -55,23 +80,23 @@ fi
 
 # ----- pacman cache -----
 echo -e "\n${YELLOW}Cleaning pacman cache...${RESET}"
-sudo paccache -r -k1
+sudo paccache -r -k3
 
 # ----- temporary files -----
-echo -e "\n${YELLOW}Cleaning /tmp and user cache...${RESET}"
-sudo find /tmp -mindepth 1 -mtime +1 -delete
-rm -rf ~/.cache/*
+#echo -e "\n${YELLOW}Cleaning /tmp and user cache...${RESET}"
+#sudo find /tmp -mindepth 1 -mtime +1 -delete
+#sudo rm -rf ~/.cache/*
 
 # ----- cache clearing -----
-echo -e "\n${YELLOW}Cleaning app-specific caches...${RESET}"
+#echo -e "\n${YELLOW}Cleaning app-specific caches...${RESET}"
 
 # Steam
-rm -rf ~/.steam/steam/appcache/* \
-       ~/.steam/steam/config/htmlcache/* \
-       ~/.steam/steam/htmlcache/* 2>/dev/null || true
+#rm -rf ~/.steam/steam/appcache/* \
+#       ~/.steam/steam/config/htmlcache/* \
+#       ~/.steam/steam/htmlcache/* 2>/dev/null || true
 
 # Firefox
-find ~/.mozilla/firefox -type d -name "cache2" -exec rm -rf {} + 2>/dev/null || true
+#find ~/.mozilla/firefox -type d -name "cache2" -exec rm -rf {} + 2>/dev/null || true
 
 # ----- font cache -----
 echo -e "\n${YELLOW}Rebuilding font cache...${RESET}"
@@ -92,3 +117,6 @@ rc-status --crashed
 # ----- DONE -----
 echo -e "\n${GREEN}=== System maintenance complete! ===${RESET}"
 echo "Finished at: $(date)"
+
+NEWTIME=$(date "+%H:%M")
+notify-send -n ~/.icons/Artix_logo.svg.png -a "artix-system-maintenance.sh" "Artix Linux" "Maintenance complete! Finished at: ${NEWTIME}"
