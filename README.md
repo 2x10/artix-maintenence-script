@@ -5,6 +5,4 @@ This script does some specific things such as updating using pacman, paru, flatp
 
 This one also stores all the terminal outputs into a log file.
 
-It clears the cache of GNOME apps, Discord, Steam, waybar, nwg apps, rofi, firefox and temporary user files.
-
 Then it shows some additional about failed openrc units and a disk usage summary. 
